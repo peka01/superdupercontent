@@ -1,0 +1,46 @@
+{
+  "folders": {
+    "exempelprodukt": "Exempelprodukt"
+  },
+  "stories": [
+    {
+      "name": "Exportera en rapport till Excel",
+      "slug": "exportera-en-rapport-till-excel",
+      "full_slug": "exempelprodukt/exportera-en-rapport-till-excel",
+      "published_at": "2026-11-19T10:00:00.000Z",
+      "content": {
+        "component": "help_article",
+        "title": "Exportera en rapport till Excel",
+        "format": "instruction",
+        "product": "exempelprodukt",
+        "body": "Exportera rapporten när du vill arbeta vidare med siffrorna i Excel. Rapporten måste vara skapad först.\n\n1. Gå till **Rapporter - Översikt**.\n2. Markera rapporten i listan.\n3. Klicka på **Exportera** och välj format.\n   - **Excel** ger en fil med en flik per avsnitt.\n   - **CSV** ger en fil utan formatering.\n\n> **Obs:** Exporten innehåller de filter som är valda just nu.\n\nFilen sparas i mappen för hämtade filer. Menyvägen i äldre versioner: [KONTROLLERA: menyväg].\n\n<details><summary>Fältförklaringar</summary>\n\n| Fält | Beskrivning | Obligatoriskt |\n|---|---|---|\n| **Period** | Den period rapporten gäller. | Ja |\n| **Format** | Filtypen som skapas. | Ja |\n| **Kommentar** | Visas överst i filen. | Nej |\n\n</details>\n\n## Relaterad information\n\n| | |\n|---|---|\n| 📄 | [Vanliga frågor om export](../vanliga-fragor-om-export/) |\n| 📄 | [Om filformatet CSV](https://example.com/csv){target=_blank} |"
+      }
+    },
+    {
+      "name": "Vanliga frågor om export",
+      "slug": "vanliga-fragor-om-export",
+      "full_slug": "exempelprodukt/vanliga-fragor-om-export",
+      "published_at": "2026-11-18T09:00:00.000Z",
+      "content": {
+        "component": "help_article",
+        "title": "Vanliga frågor om export",
+        "format": "faq",
+        "product": "exempelprodukt",
+        "body": "## Varför är exportknappen grå?\n\nKnappen går att klicka på först när en rapport är markerad i listan.\n\n## Kan jag exportera flera rapporter samtidigt?\n\nNej. Exportera en rapport i taget.\n\n## Vilket teckenformat har CSV-filen?\n\nFilen sparas som `UTF-8`."
+      }
+    },
+    {
+      "name": "Nu kan du exportera rapporter till Excel",
+      "slug": "nu-kan-du-exportera-rapporter-till-excel",
+      "full_slug": "exempelprodukt/nu-kan-du-exportera-rapporter-till-excel",
+      "published_at": "2026-11-17T08:00:00.000Z",
+      "content": {
+        "component": "help_article",
+        "title": "Nu kan du exportera rapporter till Excel",
+        "format": "news",
+        "product": "exempelprodukt",
+        "body": "Alla rapporter i översikten går nu att exportera till Excel eller CSV. Du väljer format när du klickar på **Exportera**.\n\nLäs mer i [Exportera en rapport till Excel](../exportera-en-rapport-till-excel/)."
+      }
+    }
+  ]
+}

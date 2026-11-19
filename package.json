@@ -1,0 +1,21 @@
+{
+  "name": "superdupercontent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Test site for help articles: built from the published articles in Storyblok, served by GitHub Pages.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.mjs && pagefind --site dist",
+    "build:sample": "node build.mjs --sample && pagefind --site dist",
+    "preview": "node serve.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.2.1"
+  },
+  "devDependencies": {
+    "pagefind": "^1.6.0"
+  }
+}
