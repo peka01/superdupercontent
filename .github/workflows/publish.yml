@@ -15,8 +15,10 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [content-published]
+  # Every ten minutes, at :07, :17 and so on. GitHub starts scheduled runs late, or drops them,
+  # when it is busy, and the start of an hour is its busiest time: so not on the round minutes.
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '7-59/10 * * * *'
 
 permissions:
   contents: read
