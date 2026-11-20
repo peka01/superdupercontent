@@ -34,8 +34,22 @@ Without the secret the site still builds, with no articles.
 
 ## Publish again
 
-The site is rebuilt on every push to `main`. After publishing an article in Storyblok, start a
-rebuild by hand: Actions → Publish test site → Run workflow. Nothing rebuilds it on its own yet.
+The site publishes by itself. Every ten minutes the workflow asks Storyblok what is published
+([changed.mjs](changed.mjs)) and rebuilds the site only when that differs from what the live
+site was built from (`built-from.json` on the site). An article shows on the site some minutes
+after it is published in Storyblok, usually within a quarter of an hour: GitHub starts
+scheduled runs when it has room, not on the minute. Unpublishing an article takes it off the
+site the same way.
+
+To not wait: Actions → Publish test site → Run workflow. The site is also rebuilt on every push
+to `main`.
+
+GitHub stops scheduled runs in a repository that has had no change for 60 days, and sends a
+mail about it. Enabling the workflow again under Actions starts them anew.
+
+For a rebuild the moment an article is published, something must receive Storyblok's webhook
+and ask GitHub for a `content-published` build. The workflow is ready for that; nothing sends
+it yet.
 
 ## Run it on your own machine
 

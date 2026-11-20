@@ -1,26 +1,47 @@
 name: Publish test site
 
 # Builds the site from the published articles in Storyblok and puts it on GitHub Pages.
-# Runs on every push to main and when started by hand (Actions → Publish test site → Run workflow).
-# "content-published" lets another service ask for a rebuild later, when an article is published.
+#
+# It publishes by itself: every ten minutes it asks Storyblok what is published, and builds only
+# when that differs from what the live site was built from (changed.mjs). So an article shows on
+# the site some minutes after it is published in Storyblok, and nothing is rebuilt in between.
+#
+# It also runs on every push to main and when started by hand (Actions → Publish test site →
+# Run workflow); those always build. "content-published" lets another service ask for a build at
+# once, the moment an article is published.
 on:
   push:
     branches: [main]
   workflow_dispatch:
   repository_dispatch:
     types: [content-published]
+  schedule:
+    - cron: '*/10 * * * *'
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
+  # On a scheduled run: has anything been published since the site was built? Every other kind
+  # of run builds without asking.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changed.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'schedule'
+      - id: changed
+        if: github.event_name == 'schedule'
+        run: node changed.mjs
+        env:
+          STORYBLOK_PUBLIC_TOKEN: ${{ secrets.STORYBLOK_PUBLIC_TOKEN }}
+
   build:
+    needs: check
+    if: needs.check.outputs.changed != 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -40,6 +61,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # One deployment at a time. A scheduled check never stops a build that is under way.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

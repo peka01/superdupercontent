@@ -6,11 +6,9 @@
 // Only published articles are read, with Storyblok's public token. Drafts never reach the site.
 import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs'
 import { marked } from 'marked'
+import { BUILT_FROM, COMPONENT, fingerprint, hasToken, readStoryblok } from './storyblok.mjs'
 
 const SAMPLE = process.argv.includes('--sample')
-const TOKEN = process.env.STORYBLOK_PUBLIC_TOKEN || ''
-const API = (process.env.STORYBLOK_CDN_BASE || 'https://api.storyblok.com/v2/cdn').replace(/\/+$/, '')
-const COMPONENT = process.env.STORYBLOK_COMPONENT || 'help_article'
 const OUT = 'dist'
 
 const FORMAT_LABELS = {
@@ -22,36 +20,7 @@ const FORMAT_LABELS = {
 }
 
 // --- reading ------------------------------------------------------------------------
-
-/** One call to Storyblok's delivery API. The token is never part of an error message. */
-async function cdn(path, params) {
-  const query = new URLSearchParams({ ...params, token: TOKEN, version: 'published' })
-  const response = await fetch(`${API}/${path}?${query}`)
-  if (!response.ok) {
-    throw new Error(`Storyblok answered ${response.status} on ${path}. Check STORYBLOK_PUBLIC_TOKEN and that it is a public token of the right space.`)
-  }
-  return response.json()
-}
-
-async function readStoryblok() {
-  const stories = []
-  for (let page = 1; page <= 50; page++) {
-    const data = await cdn('stories', { content_type: COMPONENT, per_page: '100', page: String(page) })
-    stories.push(...(data.stories || []))
-    if ((data.stories || []).length < 100) break
-  }
-  // Folder names, for the product headings. Without them the folder's slug is shown.
-  const folders = {}
-  try {
-    const data = await cdn('links', {})
-    for (const link of Object.values(data.links || {})) {
-      if (link.is_folder) folders[link.slug] = link.name
-    }
-  } catch {
-    // the site still builds; products are named by their slug
-  }
-  return { stories, folders }
-}
+// The articles are read by storyblok.mjs.
 
 function readSample() {
   return JSON.parse(readFileSync('sample/stories.json', 'utf8'))
@@ -122,7 +91,7 @@ let source = { stories: [], folders: {} }
 let notice = ''
 if (SAMPLE) {
   source = readSample()
-} else if (!TOKEN) {
+} else if (!hasToken()) {
   notice = 'STORYBLOK_PUBLIC_TOKEN is not set, so the site is built without articles.'
   console.log(`::notice::${notice}`)
 } else {
@@ -156,6 +125,9 @@ rmSync(OUT, { recursive: true, force: true })
 mkdirSync(`${OUT}/assets`, { recursive: true })
 cpSync('src/style.css', `${OUT}/assets/style.css`)
 writeFileSync(`${OUT}/.nojekyll`, '')
+// What the site was built from: the scheduled check (changed.mjs) compares this with what is
+// published now, and rebuilds only when they differ.
+writeFileSync(`${OUT}/${BUILT_FROM}`, `${JSON.stringify({ fingerprint: fingerprint(source), articles: articles.length, builtAt: new Date().toISOString() })}\n`)
 
 // Start page
 write(
