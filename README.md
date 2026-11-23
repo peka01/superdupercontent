@@ -20,8 +20,32 @@ This repository holds the site's code only. The articles live in Storyblok.
 - **Everything on the site is public.** Anyone with the address can read it. Each page asks
   search engines not to list it, and carries a banner saying it is a test.
 - **Drafts never reach the site.** The build uses Storyblok's public token, which can read
-  published articles only.
+  published articles only. The preview of drafts reads a draft in the writer's browser
+  only, with a token that is not on the site (see below).
 - **No secrets are in this repository.** The token is a secret in the repository's settings.
+
+## Preview of drafts in Storyblok
+
+Storyblok's Visual Editor shows the article beside the form while it is written. The page it
+shows is `preview/` on this site ([src/preview.js](src/preview.js)): it reads the one draft that
+is open, in the writer's own browser, and shows it as the published page will look. It follows
+the writer as they type, and the title can be typed straight into the preview.
+
+- **The page holds no token and no article.** Opened by itself it shows a line of text.
+- **The token is part of the address saved in Storyblok**, after a `#`. What comes after a `#`
+  stays in the browser: it is not sent to this site's server, and it is in no file here. Only
+  people who can open the space see it, and they can read the drafts anyway.
+- The text is turned into a page by the same code as the build
+  ([src/render.js](src/render.js)), so the preview and the published page look alike.
+
+To set it up, in Storyblok:
+
+1. Settings → Access Tokens → create a token with access level **Preview**.
+2. Settings → Visual Editor → Location (default environment):
+   `https://peka01.github.io/superdupercontent/preview/#t=<the preview token>&p=`
+   The address must end with `&p=`: Storyblok adds the article's path after it.
+
+To take the preview away, delete that token in Storyblok.
 
 ## Set up
 

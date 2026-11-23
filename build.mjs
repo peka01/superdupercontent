@@ -6,18 +6,11 @@
 // Only published articles are read, with Storyblok's public token. Drafts never reach the site.
 import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs'
 import { marked } from 'marked'
+import { esc, FORMAT_LABELS, renderBody as render } from './src/render.js'
 import { BUILT_FROM, COMPONENT, fingerprint, hasToken, readStoryblok } from './storyblok.mjs'
 
 const SAMPLE = process.argv.includes('--sample')
 const OUT = 'dist'
-
-const FORMAT_LABELS = {
-  instruction: 'Instruktion',
-  faq: 'Vanliga frågor',
-  getting_started: 'Kom igång',
-  concept: 'Förklaring',
-  news: 'Nyhet',
-}
 
 // --- reading ------------------------------------------------------------------------
 // The articles are read by storyblok.mjs.
@@ -28,21 +21,8 @@ function readSample() {
 
 // --- rendering ----------------------------------------------------------------------
 
-const esc = (s) =>
-  String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-
-function renderBody(markdown) {
-  let html = marked.parse(String(markdown || ''), { gfm: true })
-  // "{target=_blank}" after a link is how the templates mark an external link.
-  html = html.replace(/<a href="([^"]+)">((?:(?!<\/a>)[\s\S])*)<\/a>\{target=_blank\}/g, '<a href="$1" target="_blank" rel="noopener">$2</a>')
-  // Notes a writer was meant to resolve before publishing: make them impossible to miss.
-  html = html.replace(/\[(KONTROLLERA|LÄNK|CHECK UI TEXT): [^\]<]+\]/g, (note) => `<mark class="note">${note}</mark>`)
-  return html
-}
+// How the text becomes HTML is in src/render.js, shared with the preview of drafts.
+const renderBody = (markdown) => render(markdown, marked.parse)
 
 function page({ root, title, crumbs = [], body, builtAt, count }) {
   const trail = [{ href: root, label: 'Start' }, ...crumbs]
@@ -124,6 +104,39 @@ const shared = { builtAt, count: articles.length }
 rmSync(OUT, { recursive: true, force: true })
 mkdirSync(`${OUT}/assets`, { recursive: true })
 cpSync('src/style.css', `${OUT}/assets/style.css`)
+// The preview of drafts for Storyblok's Visual Editor: a page that reads one draft in the
+// writer's browser. It carries no token and no article; see src/preview.js.
+for (const [from, to] of [
+  ['src/preview.js', 'preview.js'],
+  ['src/render.js', 'render.js'],
+  ['node_modules/marked/lib/marked.esm.js', 'marked.esm.js'],
+]) {
+  cpSync(from, `${OUT}/assets/${to}`)
+}
+write(
+  `${OUT}/preview/index.html`,
+  `<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Förhandsvisning · Hjälp, testsida</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<p class="banner">Förhandsvisning av ett utkast. Sidan är inte publicerad.</p>
+<header class="top">
+  <span class="home">Hjälp <span>testsida</span></span>
+</header>
+<main></main>
+<script src="https://app.storyblok.com/f/storyblok-v2-latest.js"></script>
+<script type="module" src="../assets/preview.js"></script>
+</body>
+</html>
+`,
+)
 writeFileSync(`${OUT}/.nojekyll`, '')
 // What the site was built from: the scheduled check (changed.mjs) compares this with what is
 // published now, and rebuilds only when they differ.
