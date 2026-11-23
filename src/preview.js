@@ -59,10 +59,8 @@ export function show(next) {
   body.innerHTML = renderBody(c.body, marked.parse)
 
   if (marks) {
-    for (const el of [article, h1]) for (const [name, value] of Object.entries(marks)) el.setAttribute(name, value)
+    for (const [name, value] of Object.entries(marks)) article.setAttribute(name, value)
     article.classList.add('storyblok__outline')
-    // The title can be typed straight into the preview.
-    h1.setAttribute('data-blok-f', 'title')
   }
   article.append(h1, meta, ...body.childNodes)
   main.replaceChildren(article)

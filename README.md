@@ -29,7 +29,7 @@ This repository holds the site's code only. The articles live in Storyblok.
 Storyblok's Visual Editor shows the article beside the form while it is written. The page it
 shows is `preview/` on this site ([src/preview.js](src/preview.js)): it reads the one draft that
 is open, in the writer's own browser, and shows it as the published page will look. It follows
-the writer as they type, and the title can be typed straight into the preview.
+the writer as they type, and a click on the article opens its form.
 
 - **The page holds no token and no article.** Opened by itself it shows a line of text.
 - **The token is part of the address saved in Storyblok**, after a `#`. What comes after a `#`
