@@ -10,14 +10,7 @@
 // Storyblok cannot be read the answer is no, with a warning: a build would fail on the same
 // read, and the next check tries again.
 import { appendFileSync } from 'node:fs'
-import { BUILT_FROM, fingerprint, hasToken, readStoryblok } from './storyblok.mjs'
-
-/** The site's address: SITE_URL, else where GitHub Pages serves this repository. */
-function siteUrl() {
-  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/*$/, '/')
-  const [owner, name] = String(process.env.GITHUB_REPOSITORY || '').split('/')
-  return owner && name ? `https://${owner}.github.io/${name}/` : ''
-}
+import { BUILT_FROM, fingerprint, hasToken, readStoryblok, siteUrl } from './storyblok.mjs'
 
 async function liveFingerprint() {
   const site = siteUrl()

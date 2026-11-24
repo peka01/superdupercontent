@@ -15,6 +15,24 @@ Published at https://peka01.github.io/superdupercontent/
 
 This repository holds the site's code only. The articles live in Storyblok.
 
+## For machines
+
+An AI assistant can index the help from the site itself, with no export of its own. The build
+writes, from the same published articles as the pages:
+
+- `sitemap.xml`: every article page, with the time it was published.
+- `index.md` beside each article page: the article as plain Markdown, with its title, product,
+  language, address and publish time on top.
+- `llms.txt`: a short map of the products and their articles, linking to the Markdown pages.
+
+An article that is unpublished is gone from all three at the next build.
+
+## Look
+
+The pages follow the Spiris help: Inter, a warm grey header bar, purple links, bold titles, and
+the product's menu beside an article ([src/style.css](src/style.css)). The Spiris logo is not
+here: this is a public test site on a personal account.
+
 ## What is and is not public
 
 - **Everything on the site is public.** Anyone with the address can read it. Each page asks

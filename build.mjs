@@ -7,7 +7,7 @@
 import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs'
 import { marked } from 'marked'
 import { esc, FORMAT_LABELS, renderBody as render } from './src/render.js'
-import { BUILT_FROM, COMPONENT, fingerprint, hasToken, readStoryblok } from './storyblok.mjs'
+import { BUILT_FROM, COMPONENT, fingerprint, hasToken, readStoryblok, siteUrl } from './storyblok.mjs'
 
 const SAMPLE = process.argv.includes('--sample')
 const OUT = 'dist'
@@ -24,7 +24,13 @@ function readSample() {
 // How the text becomes HTML is in src/render.js, shared with the preview of drafts.
 const renderBody = (markdown) => render(markdown, marked.parse)
 
-function page({ root, title, crumbs = [], body, builtAt, count }) {
+// The Spiris help is set in Inter. The font comes from Google Fonts; the page falls back to the
+// reader's own font when it cannot be fetched.
+const FONT = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">`
+
+function page({ root, title, crumbs = [], body, builtAt, count, head = '', wide = false }) {
   const trail = [{ href: root, label: 'Start' }, ...crumbs]
     .map((c, i, all) => (i === all.length - 1 ? `<span aria-current="page">${esc(c.label)}</span>` : `<a href="${c.href}">${esc(c.label)}</a>`))
     .join('<span class="sep" aria-hidden="true">/</span>')
@@ -35,14 +41,17 @@ function page({ root, title, crumbs = [], body, builtAt, count }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)} · Hjälp, testsida</title>
+${FONT}
 <link rel="stylesheet" href="${root}assets/style.css">
 <link rel="stylesheet" href="${root}pagefind/pagefind-ui.css">
-</head>
-<body>
+${head}</head>
+<body${wide ? ' class="wide"' : ''}>
 <p class="banner">Testsida. Innehållet är under utvärdering och är inte den riktiga hjälpen.</p>
 <header class="top">
-  <a class="home" href="${root}">Hjälp <span>testsida</span></a>
-  <div id="search" class="search"></div>
+  <div class="top-in">
+    <a class="home" href="${root}">Hjälp <span>testsida</span></a>
+    <div id="search" class="search"></div>
+  </div>
 </header>
 <nav class="crumbs" aria-label="Brödsmulor">${trail}</nav>
 <main>
@@ -89,7 +98,9 @@ const articles = source.stories
       title: s.content.title || s.name,
       format: s.content.format || '',
       html: renderBody(s.content.body),
-      published: (s.published_at || s.first_published_at || '').slice(0, 10),
+      markdown: String(s.content.body || ''),
+      publishedAt: s.published_at || s.first_published_at || '',
+      published:(s.published_at || s.first_published_at || '').slice(0, 10),
     }
   })
   .sort((a, b) => a.title.localeCompare(b.title, 'sv'))
@@ -123,12 +134,15 @@ write(
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Förhandsvisning · Hjälp, testsida</title>
+${FONT}
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <p class="banner">Förhandsvisning av ett utkast. Sidan är inte publicerad.</p>
 <header class="top">
-  <span class="home">Hjälp <span>testsida</span></span>
+  <div class="top-in">
+    <span class="home">Hjälp <span>testsida</span></span>
+  </div>
 </header>
 <main></main>
 <script src="https://app.storyblok.com/f/storyblok-v2-latest.js"></script>
@@ -187,6 +201,13 @@ ${own
 </ul>`,
     }),
   )
+  // The menu beside an article: the product's articles, with the open one marked.
+  const menu = (open) => `<nav class="menu" aria-label="${esc(p.name)}">
+<p><a href="../">${esc(p.name)}</a></p>
+<ul>
+${own.map((a) => `  <li><a href="../${esc(a.slug)}/"${a === open ? ' aria-current="page"' : ''}>${esc(a.title)}</a></li>`).join('\n')}
+</ul>
+</nav>`
   for (const a of own) {
     write(
       `${OUT}/${p.slug}/${a.slug}/index.html`,
@@ -194,18 +215,88 @@ ${own
         ...shared,
         root: '../../',
         title: a.title,
+        wide: true,
+        // The same article as plain Markdown, for AI tools: see "For machines" below.
+        head: '<link rel="alternate" type="text/markdown" href="index.md">\n',
         crumbs: [
           { href: '../', label: p.name },
           { href: './', label: a.title },
         ],
-        body: `<article data-pagefind-body>
+        body: `<div class="with-menu">
+${menu(a)}
+<article data-pagefind-body>
 <h1>${esc(a.title)}</h1>
 <p class="meta" data-pagefind-ignore>${[FORMAT_LABELS[a.format], p.name, a.published ? `publicerad ${a.published}` : ''].filter(Boolean).map(esc).join(' · ')}</p>
 ${a.html}
-</article>`,
+</article>
+</div>`,
       }),
     )
   }
 }
+
+// --- for machines -------------------------------------------------------------------
+// What an AI assistant needs to index the help without an export of its own: a list of every
+// published page with the time it was published (sitemap.xml), each article as plain Markdown
+// beside its page (index.md), and a short map of it all (llms.txt). Only published articles are
+// here, as on the pages, and an article that is unpublished is gone from all three at the next
+// build.
+const SITE = siteUrl()
+const LANG = 'sv'
+const pageUrl = (a) => `${SITE}${a.productSlug}/${a.slug}/`
+const quoted = (s) => JSON.stringify(String(s ?? ''))
+
+for (const a of articles) {
+  const text = a.markdown.split('{target=_blank}').join('').trim()
+  writeFileSync(
+    `${OUT}/${a.productSlug}/${a.slug}/index.md`,
+    `---
+title: ${quoted(a.title)}
+product: ${quoted(a.productName)}
+product_id: ${quoted(a.productSlug)}
+language: ${quoted(LANG)}
+url: ${quoted(pageUrl(a))}
+published: ${quoted(a.publishedAt)}
+---
+
+# ${a.title}
+
+${text}
+`,
+    'utf8',
+  )
+}
+
+writeFileSync(
+  `${OUT}/sitemap.xml`,
+  `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${articles
+  .map((a) => `  <url><loc>${esc(pageUrl(a))}</loc>${a.publishedAt ? `<lastmod>${esc(a.publishedAt)}</lastmod>` : ''}</url>`)
+  .join('\n')}
+</urlset>
+`,
+  'utf8',
+)
+
+writeFileSync(
+  `${OUT}/llms.txt`,
+  `# Hjälp, testsida
+
+> Testsida med publicerade hjälpartiklar på svenska. Varje artikel finns som Markdown på sidans adress plus index.md, och alla sidor listas i ${SITE}sitemap.xml.
+
+${products
+  .map(
+    (p) => `## ${p.name}
+
+${articles
+  .filter((a) => a.productSlug === p.slug)
+  .map((a) => `- [${a.title}](${pageUrl(a)}index.md)`)
+  .join('\n')}`,
+  )
+  .join('\n\n')}
+`,
+  'utf8',
+)
 
 console.log(`Built ${articles.length} article(s) in ${products.length} product(s) into ${OUT}/${notice ? ` (${notice})` : ''}`)

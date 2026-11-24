@@ -10,6 +10,16 @@ const API = (process.env.STORYBLOK_CDN_BASE || 'https://api.storyblok.com/v2/cdn
 export const COMPONENT = process.env.STORYBLOK_COMPONENT || 'help_article'
 export const hasToken = () => !!TOKEN
 
+/**
+ * The site's address, ending in a slash: SITE_URL, else where GitHub Pages serves this
+ * repository. The build needs it for the list of pages; the check needs it to read the live site.
+ */
+export function siteUrl() {
+  if (process.env.SITE_URL) return `${process.env.SITE_URL.replace(/\/+$/, '')}/`
+  const [owner, name] = String(process.env.GITHUB_REPOSITORY || 'peka01/superdupercontent').split('/')
+  return `https://${owner}.github.io/${name}/`
+}
+
 /** The file on the built site that says what it was built from. */
 export const BUILT_FROM = 'built-from.json'
 
