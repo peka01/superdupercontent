@@ -4,6 +4,7 @@
 //   node build.mjs --sample   reads sample/stories.json instead: no network, no token
 //
 // Only published articles are read, with Storyblok's public token. Drafts never reach the site.
+import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs'
 import { marked } from 'marked'
 import { esc, FORMAT_LABELS, renderBody as render } from './src/render.js'
@@ -30,6 +31,10 @@ const FONT = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">`
 
+// The stylesheet's address carries a mark of its content, so a browser that kept the old one
+// fetches the new one at once when the look changes.
+const STYLE = `assets/style.css?v=${createHash('sha256').update(readFileSync('src/style.css')).digest('hex').slice(0, 8)}`
+
 // The Spiris logo is read from the Spiris help's own test site, so no copy of it is kept here.
 const LOGO = 'https://test.support.spiris.se/sv-se/spiris-logo-black.png'
 const home = (inner) => `${inner}<img src="${LOGO}" alt="Spiris" width="69" height="28"> <span>testsida</span>`
@@ -48,7 +53,7 @@ function page({ root, title, crumbs = [], body, builtAt, count, head = '', wide 
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)} · Hjälp, testsida</title>
 ${FONT}
-<link rel="stylesheet" href="${root}assets/style.css">
+<link rel="stylesheet" href="${root}${STYLE}">
 <link rel="stylesheet" href="${root}pagefind/pagefind-ui.css">
 ${head}</head>
 <body${wide || hero ? ` class="${hero ? 'wide start' : 'wide'}"` : ''}>
@@ -141,7 +146,7 @@ write(
 <meta name="referrer" content="no-referrer">
 <title>Förhandsvisning · Hjälp, testsida</title>
 ${FONT}
-<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../${STYLE}">
 </head>
 <body>
 <p class="banner">Förhandsvisning av ett utkast. Sidan är inte publicerad.</p>
