@@ -30,7 +30,13 @@ const FONT = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">`
 
-function page({ root, title, crumbs = [], body, builtAt, count, head = '', wide = false }) {
+// The Spiris logo is read from the Spiris help's own test site, so no copy of it is kept here.
+const LOGO = 'https://test.support.spiris.se/sv-se/spiris-logo-black.png'
+const home = (inner) => `${inner}<img src="${LOGO}" alt="Spiris" width="69" height="28"> <span>testsida</span>`
+
+// `hero` is the coloured top of the start page, with the search in it. Other pages have the
+// search in the header bar and a line of links above the title.
+function page({ root, title, crumbs = [], body, builtAt, count, head = '', wide = false, hero = '' }) {
   const trail = [{ href: root, label: 'Start' }, ...crumbs]
     .map((c, i, all) => (i === all.length - 1 ? `<span aria-current="page">${esc(c.label)}</span>` : `<a href="${c.href}">${esc(c.label)}</a>`))
     .join('<span class="sep" aria-hidden="true">/</span>')
@@ -45,15 +51,15 @@ ${FONT}
 <link rel="stylesheet" href="${root}assets/style.css">
 <link rel="stylesheet" href="${root}pagefind/pagefind-ui.css">
 ${head}</head>
-<body${wide ? ' class="wide"' : ''}>
+<body${wide || hero ? ` class="${hero ? 'wide start' : 'wide'}"` : ''}>
 <p class="banner">Testsida. Innehållet är under utvärdering och är inte den riktiga hjälpen.</p>
 <header class="top">
   <div class="top-in">
-    <a class="home" href="${root}">Hjälp <span>testsida</span></a>
-    <div id="search" class="search"></div>
+    <a class="home" href="${root}">${home('')}</a>
+    ${hero ? '' : '<div id="search" class="search"></div>'}
   </div>
 </header>
-<nav class="crumbs" aria-label="Brödsmulor">${trail}</nav>
+${hero || `<nav class="crumbs" aria-label="Brödsmulor">${trail}</nav>`}
 <main>
 ${body}
 </main>
@@ -141,7 +147,7 @@ ${FONT}
 <p class="banner">Förhandsvisning av ett utkast. Sidan är inte publicerad.</p>
 <header class="top">
   <div class="top-in">
-    <span class="home">Hjälp <span>testsida</span></span>
+    <span class="home">${home('')}</span>
   </div>
 </header>
 <main></main>
@@ -156,24 +162,71 @@ writeFileSync(`${OUT}/.nojekyll`, '')
 // published now, and rebuilds only when they differ.
 writeFileSync(`${OUT}/${BUILT_FROM}`, `${JSON.stringify({ fingerprint: fingerprint(source), articles: articles.length, builtAt: new Date().toISOString() })}\n`)
 
-// Start page
+// Start page: as the Spiris help's own. A coloured top with the title and the search, the latest
+// news, and one card per product with its latest articles.
+const day = (iso) => (iso ? new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm', day: 'numeric', month: 'long', year: 'numeric' }) : '')
+const newest = (list, n) => [...list].sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt))).slice(0, n)
+// The first paragraph of an article as plain words, for the news at the top.
+const lead = (markdown) => {
+  const first = String(markdown).split(/\n\s*\n/).find((part) => /^[A-Za-zÅÄÖåäö0-9*_[]/.test(part.trim())) || ''
+  const words = first.replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`>#]/g, '').replace(/\s+/g, ' ').trim()
+  return words.length > 170 ? `${words.slice(0, 167).trimEnd()}…` : words
+}
+const news = newest(articles.filter((a) => a.format === 'news'), 5)
+const href = (a) => `${esc(a.productSlug)}/${esc(a.slug)}/`
+
 write(
   `${OUT}/index.html`,
   page({
     ...shared,
     root: './',
     title: 'Start',
+    hero: `<section class="hero">
+  <h1>Skriven hjälp för Spiris</h1>
+  <div id="search" class="search"></div>
+  <p>Senast uppdaterad ${esc(day(new Date().toISOString()))}</p>
+</section>`,
     body:
       articles.length === 0
-        ? `<h1>Hjälp</h1>
-<p class="empty">Det finns inga publicerade artiklar ännu.</p>
+        ? `<p class="empty">Det finns inga publicerade artiklar ännu.</p>
 <p>Publicera en artikel i Storyblok och kör om bygget, så visas den här.</p>`
-        : `<h1>Hjälp</h1>
-<ul class="cards">
+        : `${
+            news.length === 0
+              ? ''
+              : `<section class="news" aria-labelledby="news-title">
+<h2 id="news-title">Senaste nyheterna</h2>
+<div class="news-grid">
+  <a class="news-main" href="${href(news[0])}">
+    <span class="news-meta">${esc(day(news[0].publishedAt))} <span class="chip">${esc(news[0].productName)}</span></span>
+    <strong>${esc(news[0].title)}</strong>
+    <span class="news-lead">${esc(lead(news[0].markdown))}</span>
+  </a>
+${
+  news.length > 1
+    ? `  <ul class="news-more">
+${news
+  .slice(1)
+  .map((a) => `    <li><a href="${href(a)}"><strong>${esc(a.title)}</strong><span class="news-meta">${esc(a.productName)} · ${esc(day(a.publishedAt))}</span></a></li>`)
+  .join('\n')}
+  </ul>`
+    : ''
+}
+</div>
+</section>
+`
+          }<ul class="cards">
 ${products
   .map((p) => {
-    const n = articles.filter((a) => a.productSlug === p.slug).length
-    return `  <li><a href="${esc(p.slug)}/"><strong>${esc(p.name)}</strong><span>${n} ${n === 1 ? 'artikel' : 'artiklar'}</span></a></li>`
+    const own = articles.filter((a) => a.productSlug === p.slug)
+    return `  <li class="card">
+    <div class="card-head"><h2>${esc(p.name)}</h2><a href="${esc(p.slug)}/">Visa alla<span class="sr"> i ${esc(p.name)}</span></a></div>
+    <p class="card-label">Senast publicerade</p>
+    <ul class="card-list">
+${newest(own, 5)
+  .map((a) => `      <li><a href="${href(a)}">${esc(a.title)}</a></li>`)
+  .join('\n')}
+    </ul>
+  </li>`
   })
   .join('\n')}
 </ul>`,
