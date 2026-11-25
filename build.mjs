@@ -5,7 +5,7 @@
 //
 // Only published articles are read, with Storyblok's public token. Drafts never reach the site.
 import { createHash } from 'node:crypto'
-import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, existsSync } from 'node:fs'
 import { marked } from 'marked'
 import { esc, FORMAT_LABELS, renderBody as render } from './src/render.js'
 import { BUILT_FROM, COMPONENT, fingerprint, hasToken, readStoryblok, siteUrl } from './storyblok.mjs'
@@ -358,3 +358,33 @@ ${articles
 )
 
 console.log(`Built ${articles.length} article(s) in ${products.length} product(s) into ${OUT}/${notice ? ` (${notice})` : ''}`)
+
+// --- old addresses ------------------------------------------------------------------
+// Addresses from the old help (Flare) that should lead to a page here. redirects.json maps an old
+// path to a new one, both counted from the site's root. GitHub Pages cannot answer with a
+// redirect of its own, so each old address gets a small page that sends the reader on at once.
+// Where the site is served by something that can redirect (Azure), the same list can be turned
+// into real redirects instead.
+const redirects = existsSync('redirects.json') ? JSON.parse(readFileSync('redirects.json', 'utf8')) : {}
+for (const [from, to] of Object.entries(redirects)) {
+  const target = `${SITE}${String(to).replace(/^\/+/, '')}`
+  write(
+    `${OUT}/${String(from).replace(/^\/+/, '')}`,
+    `<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="${esc(target)}">
+<meta http-equiv="refresh" content="0; url=${esc(target)}">
+<title>Sidan har flyttat</title>
+</head>
+<body>
+<p>Sidan har flyttat till <a href="${esc(target)}">${esc(target)}</a>.</p>
+<script>location.replace(${JSON.stringify(target)} + location.hash)</script>
+</body>
+</html>
+`,
+  )
+}
+if (Object.keys(redirects).length) console.log(`Wrote ${Object.keys(redirects).length} old address(es) that lead to their new pages`)

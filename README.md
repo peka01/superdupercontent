@@ -27,6 +27,13 @@ writes, from the same published articles as the pages:
 
 An article that is unpublished is gone from all three at the next build.
 
+## Old addresses
+
+[redirects.json](redirects.json) lists addresses from the old help that should lead to a page
+here: the old path, and the new one. The build writes a small page at each old address that
+sends the reader on at once. GitHub Pages cannot answer with a real redirect; where the site is
+served by something that can (Azure), the same list can be used for real redirects.
+
 ## Look
 
 The pages follow the Spiris help: Inter, a warm grey header bar, purple links, bold titles, and
